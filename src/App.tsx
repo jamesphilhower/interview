@@ -34,21 +34,15 @@ const Main = () => {
       autoFocus={true}
       value={userInput}
       onChange={(e) => setUserInput(e.target.value)}
+      //onKeyDown={(e) => console.log("keydown", e.key)}
       type={"text"}
     ></input>
   );
 
   const grid = () => {
-    let output: [string[]] = [[]];
     // length of words are 5
-    for (let i = 0; i < 5; i++) {
-      output.push([]);
-
-      // number of tries are 6
-      for (let j = 0; j < 6; j++) {
-        output[i].push(" ");
-      }
-    }
+    const output = Array(6).fill(Array(5).fill("")) as [[string]];
+    console.log(output);
     return output;
   };
 
@@ -71,17 +65,35 @@ const Main = () => {
   });
 
   const validateInput = (userWord: string) => {
+    //had to readjust logic here bc dont think greedy approach works for multiple letters 'nnbbn' for 'Leann'
+    userWord = userWord.toLowerCase();
+    word = word.toLowerCase();
     let cur: number = 0;
-    console.log("validate input user word", userWord);
-    return [...word].map((val) => {
-      let returnVal = null;
-      if (val === userWord[cur]) {
-        returnVal = CorrectLetter(val);
-      }
-      if (userWord.includes(val)) {
-        returnVal = MisplacedLetter(val);
+    let wordDict = new Map();
+    let correct = [5];
+    for (let i = 0; i < word.length; i++) {
+      if (userWord[i] === word[i]) {
+        correct[i] = 1;
       } else {
-        returnVal = IncorrectLetter(val);
+        if (wordDict.has(word[i])) {
+          wordDict.set(word[i], wordDict.get(word[i]) + 1);
+        } else {
+          wordDict.set(word[i], 1);
+        }
+      }
+    }
+    console.log("validate input user word", userWord);
+    return [...userWord].map((val) => {
+      console.log(val + " " + word[cur]);
+      console.log(val.toLowerCase() === word[cur].toLowerCase());
+      let returnVal = null;
+      if (correct[cur] === 1) {
+        returnVal = CorrectLetter(val);
+      } else if (word.includes(val) && wordDict.get(val) > 0) {
+        returnVal = MisplacedLetter(userWord[cur]);
+        wordDict.set(val, wordDict.get(val) - 1);
+      } else {
+        returnVal = IncorrectLetter(userWord[cur]);
       }
       cur += 1;
       return returnVal;
@@ -92,7 +104,10 @@ const Main = () => {
     <button
       onClick={() => {
         console.log("User entered", userInput);
-        setAttempts([...attempts, validateInput(userInput)]);
+        console.log(!/[^a-zA-Z]/.test(userInput));
+        if (userInput.length === 5 && !/[^a-zA-Z]/.test(userInput)) {
+          setAttempts([...attempts, validateInput(userInput)]);
+        }
       }}
     >
       <text>Submit</text>
@@ -108,7 +123,7 @@ const Main = () => {
         console.log("attempts exists");
         return (
           <>
-            {attempts}
+            {attempts[currentTry - 1]}
             <div
               style={{ height: 10, width: 400, backgroundColor: "red" }}
             ></div>
