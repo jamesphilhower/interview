@@ -2,17 +2,50 @@ import React from "react";
 
 const Main = () => {
   const [userInput, setUserInput] = React.useState("");
-
   const [attempts, setAttempts] = React.useState<any[]>([]);
+  const [answer, setAnswer] = React.useState<string>("waiting");
+  const [answers, setAnswers] = React.useState<{ name: string }[]>([]);
+  const [gameState, setGameState] = React.useState<any>(null);
 
-  const Header = <h1>Wordle but with names</h1>;
+  React.useMemo(async () => {
+    const response = await fetch("https://jsonplaceholder.typicode.com/users", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (response.ok) {
+      response.json().then((json) => {
+        setAnswers(json);
+      });
+    }
+  }, []);
 
+  React.useEffect(() => {
+    if (answers.length > 0) {
+      console.log("answers", answers);
+      setAnswer(answers[0].name!.slice(0, 5));
+    }
+  }, [answers]);
+
+  console.log("answer", answer);
+
+  const Header = () => <h1>Wordle but with names</h1>;
   const Letter = (letter: string, backgroundColor: string) => {
     return (
-      <div style={{ height: 40, width: 40, borderRadius: 15, backgroundColor }}>
-        <h1 style={{ alignContent: "center", alignItems: "center" }}>
-          {letter}
-        </h1>
+      <div
+        style={{
+          height: 40,
+          width: 40,
+          borderRadius: 15,
+          backgroundColor,
+          display: "flex",
+          justifyContent: "center",
+          alignContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <h1>{letter}</h1>
       </div>
     );
   };
@@ -52,28 +85,29 @@ const Main = () => {
     return output;
   };
 
-  let word = "";
-  fetch("https://jsonplaceholder.typicode.com/users", {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
-  }).then((response) => {
-    if (response.ok) {
-      response.json().then((json) => {
-        // console.log("Success", json);
-        word = json[0].name.slice(0, 5);
-        console.log("the word is ", word);
-      });
-    } else {
-      console.log("Error", response);
+  React.useEffect(() => {
+    if (answers.length > 0) {
+      setAttempts([]);
     }
-  });
+  }, [answer]);
+
+  React.useEffect(() => {
+    if (gameState === "won") {
+      if (answers.length > 0) {
+        const index = Math.floor(Math.random() * answers.length);
+        const newAnswer = answers[index].name.slice(0, 5);
+        setAnswer(newAnswer);
+      }
+    }
+  }, [gameState]);
 
   const validateInput = (userWord: string) => {
     let cur: number = 0;
     console.log("validate input user word", userWord);
-    return [...word].map((val) => {
+    if (userWord === answer) {
+      setGameState("won");
+    }
+    return [...answer].map((val) => {
       let returnVal = null;
       if (val === userWord[cur]) {
         returnVal = CorrectLetter(val);
@@ -108,7 +142,7 @@ const Main = () => {
         console.log("attempts exists");
         return (
           <>
-            {attempts}
+            <div style={{ display: "flex" }}>{attempts}</div>
             <div
               style={{ height: 10, width: 400, backgroundColor: "red" }}
             ></div>
@@ -117,25 +151,25 @@ const Main = () => {
       }
       return (
         <>
-          {row.map((col) => Letter(" ", "gray"))}
-          <div style={{ height: 10, width: 400, backgroundColor: "red" }}></div>
+          <div
+            style={{
+              display: "flex",
+              width: 500,
+              justifyContent: "space-between",
+              paddingBottom: 10,
+            }}
+          >
+            {row.map((col) => Letter(" ", "gray"))}{" "}
+          </div>
+          <div style={{ height: 10, backgroundColor: "red" }}></div>
         </>
       );
     });
   };
 
-  return (
-    <>
-      <Input></Input>
-      {submitButton()}
-      {Header}
-      {GameGrid()}
-    </>
-  );
+  return [Input(), submitButton(), Header(), GameGrid()];
 };
 
-const App = () => {
-  return <Main />;
-};
+const App = () => <>{Main()}</>;
 
 export default App;
